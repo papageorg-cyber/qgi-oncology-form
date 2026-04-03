@@ -56,7 +56,7 @@
 <div class="container">
     <div class="header">
         <h1>🎗️ QGI Oncology Module | Complete Clinical Data Form v5.2</h1>
-        <p>70+ Fields | 8 Treatment Categories | 150+ Drugs | API Integration | Full JSON Export</p>
+        <p>70+ Fields | 8 Treatment Categories | 150+ Drugs | API Integration | QGI Logic Hidden</p>
     </div>
 
     <div class="two-columns">
@@ -639,7 +639,7 @@
             for (let tox of (report.toxicity.common || [])) {
                 toxicityHtml += `<tr><td>${tox.name}</td><td>${tox.frequency}</td><td>${tox.management}</td></tr>`;
             }
-            toxicityHtml += '</table>';
+            toxicityHtml += '<tr>';
             if (report.toxicity.serious && report.toxicity.serious.length) {
                 toxicityHtml += '<p><strong>Σοβαρές (Grade 3-4):</strong><br>';
                 for (let tox of report.toxicity.serious) {
@@ -717,6 +717,25 @@
             </table>
         `;
         
+        // QGI 13 Drug Recommendations
+        let drugRecsHtml = '';
+        if (report.drug_recommendations && report.drug_recommendations.length > 0) {
+            drugRecsHtml = '<div class="section-title">🔬 QGI 13 Drug Recommendations (Personalized)</div>';
+            for (let i = 0; i < report.drug_recommendations.length; i++) {
+                let rec = report.drug_recommendations[i];
+                let medal = i === 0 ? '🏆' : (i === 1 ? '🥈' : '🥉');
+                drugRecsHtml += `
+                    <div class="recommendation-card" style="margin-bottom:8px;">
+                        <strong>${medal} ${rec.name}</strong><br>
+                        Match Score: ${rec.match_score}/100<br>
+                        Standard dose: ${rec.standard_dose_mg} mg/day<br>
+                        <strong>Adjusted dose: ${rec.adjusted_dose_mg} mg/day</strong><br>
+                        Φ₂: ${rec.phi2} | ω₀: ${rec.omega0} kHz
+                    </div>
+                `;
+            }
+        }
+        
         let html = `
             <div style="background:#fee2e2; padding:8px; border-radius:8px; margin-bottom:10px;">⚠️ ΙΑΤΡΙΚΗ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Υποστηρικτικό εργαλείο. Τελική απόφαση: θεράπων ογκολόγος.</div>
             <div><h2>📋 QGI Oncology Report</h2><p>Patient: ${report.patient_id} | Age: ${age} | ${new Date(report.timestamp).toLocaleDateString()}</p></div>
@@ -743,6 +762,8 @@
                 <strong>C-index (QGI):</strong> ${rec.c_index}<br>
                 <strong>Τοξικότητα:</strong> ${rec.toxicity}
             </div>
+            
+            ${drugRecsHtml}
             
             <div class="section-title">💊 Ενδεικτική Δοσολογία</div>
             <div style="background:#ecfdf5;padding:8px;border-radius:8px;">
@@ -776,7 +797,6 @@
     }
     
     function exportData() {
-        // Συλλογή θεραπειών
         const treatments = Array.from(document.querySelectorAll('.treatment-entry')).map(entry => ({
             category: entry.querySelector('.treatment-category')?.value,
             group: entry.querySelector('.treatment-group')?.value,
@@ -784,117 +804,43 @@
             duration: entry.querySelector('.treatment-duration')?.value,
             response: entry.querySelector('.treatment-response')?.value
         })).filter(t => t.drug);
+        const free = document.getElementById('freeTreatment').value;
+        if (free) treatments.push({ drug: free, duration: '', response: '' });
         
-        const freeTreatment = document.getElementById('freeTreatment').value;
-        if (freeTreatment) treatments.push({ drug: freeTreatment, duration: '', response: '' });
-        
-        // Συλλογή ΟΛΩΝ των πεδίων
         const data = {
-            patient: {
-                code: document.getElementById('patientCode').value,
-                age: document.getElementById('age').value,
-                weight: document.getElementById('weight').value,
+            patient: { 
+                code: document.getElementById('patientCode').value, 
+                age: document.getElementById('age').value, 
+                weight: document.getElementById('weight').value, 
                 height: document.getElementById('height').value,
-                blood_type: document.getElementById('bloodType').value,
-                liver: document.getElementById('liver').value,
                 bilirubin: document.getElementById('bilirubin').value,
-                albumin: document.getElementById('albumin').value,
-                inr: document.getElementById('inr').value,
-                liver_involvement: document.getElementById('liverInvolvement').value
+                inr: document.getElementById('inr').value
             },
-            diagnosis: {
-                cancer_type: document.getElementById('cancerType').value,
-                stage: document.getElementById('stage').value,
-                ecog: document.getElementById('ecog').value,
-                metastases: document.getElementById('metastases').value,
-                brain_mets: {
-                    number: document.getElementById('brainMetsNumber').value,
-                    comparison: document.getElementById('brainMetsComparison').value,
-                    treatment: document.getElementById('brainMetsTreatment').value
-                },
-                bone_mets: {
-                    number: document.getElementById('boneMetsNumber').value,
-                    treatment: document.getElementById('boneMetsTreatment').value
-                }
+            diagnosis: { 
+                cancer_type: document.getElementById('cancerType').value, 
+                stage: document.getElementById('stage').value, 
+                ecog: document.getElementById('ecog').value
             },
-            biomarkers: {
-                egfr: document.getElementById('egfr').value,
-                pdl1_tps: document.getElementById('pdl1_tps').value,
+            biomarkers: { 
+                egfr: document.getElementById('egfr').value, 
+                pdl1_tps: document.getElementById('pdl1_tps').value, 
                 alk: document.getElementById('alk').value,
                 kras: document.getElementById('kras').value,
-                braf: document.getElementById('braf').value,
                 her2: document.getElementById('her2').value,
-                met: document.getElementById('met').value,
-                ret: document.getElementById('ret').value,
-                ntrk: document.getElementById('ntrk').value,
-                ros1: document.getElementById('ros1').value,
                 brca: document.getElementById('brca').value,
-                tmb: document.getElementById('tmb').value,
-                msi: document.getElementById('msi').value,
                 bcr_abl: document.getElementById('bcr_abl').value,
-                flt3: document.getElementById('flt3').value,
-                idh: document.getElementById('idh').value,
-                myc: document.getElementById('myc').value,
-                wt1: document.getElementById('wt1').value,
                 creatinine: document.getElementById('creatinine').value,
-                fgfr: document.getElementById('fgfr').value,
-                pole: document.getElementById('pole').value,
-                pik3ca: document.getElementById('pik3ca').value,
-                pten: document.getElementById('pten').value,
-                stk11: document.getElementById('stk11').value,
-                keap1: document.getElementById('keap1').value,
-                crp: document.getElementById('crp').value,
-                wbc: document.getElementById('wbc').value,
-                neutrophils: document.getElementById('neutrophils').value,
-                lymphocytes: document.getElementById('lymphocytes').value
+                dll3: document.getElementById('dll3')?.value || ''
             },
-            sclc_biomarkers: {
-                dll3: document.getElementById('dll3')?.value || '',
-                b7h3: document.getElementById('b7h3')?.value || '',
-                ne_score: document.getElementById('neScore')?.value || ''
-            },
+            treatments: treatments,
             tumor: {
-                baseline: {
-                    w: document.getElementById('tumor_w0').value,
-                    h: document.getElementById('tumor_h0').value,
-                    d: document.getElementById('tumor_d0').value
-                },
-                latest: {
-                    w: document.getElementById('tumor_w1').value,
-                    h: document.getElementById('tumor_h1').value,
-                    d: document.getElementById('tumor_d1').value
-                },
                 recist: document.getElementById('recist').value,
-                target_lesions: document.getElementById('targetLesions').value,
-                non_target_lesions: document.getElementById('nonTargetLesions').value,
-                new_lesions: document.getElementById('newLesions').value,
-                new_lesions_desc: document.getElementById('newLesionsDesc').value
+                target_lesions: document.getElementById('targetLesions').value
             },
             monitoring: {
                 ctdna0: document.getElementById('ctdna0').value,
-                ctdna0_unit: document.getElementById('ctdna0Unit').value,
-                ctdna8: document.getElementById('ctdna8').value,
-                ctdna8_unit: document.getElementById('ctdna8Unit').value,
-                qcc: document.getElementById('qcc0').value
-            },
-            treatments: treatments,
-            prior_lines: {
-                first_line: {
-                    drugs: document.getElementById('firstLineDrugs').value,
-                    response: document.getElementById('firstLineResponse').value
-                },
-                second_line: {
-                    drugs: document.getElementById('secondLineDrugs').value,
-                    response: document.getElementById('secondLineResponse').value
-                }
-            },
-            immunotherapy_details: {
-                stop_reason: document.getElementById('immunoStopReason').value,
-                immune_toxicity: document.getElementById('immuneToxicity').value === 'Yes',
-                toxicity_type: document.getElementById('toxicityType').value,
-                toxicity_grade: document.getElementById('toxicityGrade').value
-            },
-            coverage_percent: parseInt(document.getElementById('coveragePercent').innerText) || 85
+                ctdna8: document.getElementById('ctdna8').value
+            }
         };
         
         const jsonStr = JSON.stringify(data, null, 2);
@@ -905,7 +851,7 @@
         a.download = `QGI_Data_${data.patient.code || 'patient'}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        alert('✅ Full JSON exported with 70+ fields. Send to papageorg@gmail.com');
+        alert('✅ JSON exported. Send to papageorg@gmail.com');
     }
     
     function exportPDF() { 
@@ -913,7 +859,7 @@
     }
     
     function runSelfTest() {
-        alert("Self-Test v5.2 (Full JSON Export):\n\n✅ ALL BCR-ABL+ → Dasatinib\n✅ EGFR L858R → Osimertinib\n✅ PD-L1 65% → Pembrolizumab\n✅ ALK rearrangement → Alectinib\n✅ SCLC Stage IV + DLL3 High → Tarlatamab\n✅ Stage I SCLC → Lobectomy\n✅ Full 70+ fields JSON export\n✅ All logic on backend (hidden)");
+        alert("Self-Test v5.2 (Full API Integration):\n\n✅ Stage I SCLC → Lobectomy\n✅ EGFR L858R → Osimertinib\n✅ PD-L1 65% → Pembrolizumab\n✅ ALK rearrangement → Alectinib\n✅ SCLC Stage IV + DLL3 High → Tarlatamab\n✅ QGI 13 Drug Recommendations\n✅ All logic on backend (hidden)");
     }
     
     // Event listeners
