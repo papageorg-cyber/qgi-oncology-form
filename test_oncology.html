@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QGI Oncology Test</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: auto; padding: 20px; }
+        textarea, input, select { width: 100%; margin: 10px 0; padding: 8px; }
+        button { background: #1a3e6f; color: white; padding: 10px; border: none; cursor: pointer; }
+        .result { background: #f0f0f0; padding: 15px; margin-top: 20px; border-radius: 5px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>QGI Oncology Report (Test)</h1>
+    <p>Enter patient data to receive a personalized therapy report.</p>
+    
+    <label>Patient Code:</label>
+    <input type="text" id="patientCode" value="LC045">
+    
+    <label>Cancer Type:</label>
+    <select id="cancerType">
+        <option value="NSCLC_adeno">NSCLC - Αδενοκαρκίνωμα</option>
+        <option value="SCLC" selected>SCLC</option>
+        <option value="ALL">ALL</option>
+        <option value="CML">CML</option>
+        <option value="breast_HR_positive">Μαστός HR+</option>
+    </select>
+    
+    <label>EGFR:</label>
+    <select id="egfr">
+        <option value="wild_type" selected>Wild-type</option>
+        <option value="L858R">L858R</option>
+        <option value="Ex19del">Ex19del</option>
+    </select>
+    
+    <label>PD-L1 TPS (%):</label>
+    <input type="number" id="pdl1_tps" value="15">
+    
+    <label>ALK:</label>
+    <select id="alk">
+        <option selected>Negative</option>
+        <option>Rearrangement</option>
+    </select>
+    
+    <label>KRAS:</label>
+    <select id="kras">
+        <option selected>Wild-type</option>
+        <option>G12C</option>
+    </select>
+    
+    <label>HER2:</label>
+    <select id="her2">
+        <option selected>Negative</option>
+        <option>Positive</option>
+    </select>
+    
+    <label>BRCA:</label>
+    <select id="brca">
+        <option selected>Wild-type</option>
+        <option>Germline mutation</option>
+    </select>
+    
+    <label>BCR-ABL:</label>
+    <select id="bcr_abl">
+        <option value="negative" selected>Negative</option>
+        <option value="positive">Positive</option>
+    </select>
+    
+    <label>DLL3 (SCLC only):</label>
+    <select id="dll3">
+        <option>High</option>
+        <option selected>Medium</option>
+        <option>Low</option>
+    </select>
+    
+    <label>Previous treatments (comma separated):</label>
+    <input type="text" id="prior_treatments" placeholder="Pembrolizumab, Osimertinib">
+    
+    <button onclick="generateReport()">Generate Report</button>
+    
+    <div id="result" class="result" style="display:none;"></div>
+    <div id="error" class="error" style="display:none;"></div>
+    
+    <script>
+        const API_URL = 'https://embryotrophic-fittingly-jill.ngrok-free.dev/api/oncology_report';
+        const HEADERS = {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+        };
+        
+        async function generateReport() {
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            resultDiv.innerHTML = 'Loading...';
+            resultDiv.style.display = 'block';
+            
+            // Δημιουργία του JSON με τη δομή που περιμένει το API
+            const data = {
+                patient: {
+                    code: document.getElementById('patientCode').value,
+                    weight: 68,
+                    height: 165,
+                    bilirubin: 0.8,
+                    inr: 1.0
+                },
+                diagnosis: {
+                    cancer_type: document.getElementById('cancerType').value,
+                    brain_mets: { number: 2, comparison: 'stable', treatment: 'SRS' },
+                    bone_mets: { number: 3, treatment: 'Denosumab' }
+                },
+                biomarkers: {
+                    egfr: document.getElementById('egfr').value,
+                    pdl1_tps: parseInt(document.getElementById('pdl1_tps').value) || 0,
+                    alk: document.getElementById('alk').value,
+                    kras: document.getElementById('kras').value,
+                    her2: document.getElementById('her2').value,
+                    brca: document.getElementById('brca').value,
+                    bcr_abl: document.getElementById('bcr_abl').value,
+                    creatinine: 0.9
+                },
+                sclc_biomarkers: {
+                    dll3: document.getElementById('dll3').value,
+                    b7h3: 'Positive',
+                    ne_score: 0.72
+                },
+                tumor: {
+                    baseline: { w: 4.2, h: 3.5, d: 3.1 },
+                    latest: { w: 3.8, h: 3.2, d: 2.8 },
+                    recist: 'PR',
+                    target_lesions: 'RUL mass',
+                    non_target_lesions: 'mediastinal LNs',
+                    new_lesions: 'No'
+                },
+                monitoring: {
+                    ctdna0: 12.3,
+                    ctdna8: 13.0,
+                    qcc: 0.31
+                },
+                treatments: [],
+                prior_lines: {
+                    first_line: { drugs: 'Carboplatin + Etoposide', response: 'CR' },
+                    second_line: { drugs: 'Pembrolizumab', response: 'SD' }
+                },
+                immunotherapy_details: {
+                    stop_reason: 'Ολοκλήρωση κύκλων',
+                    immune_toxicity: false
+                }
+            };
+            
+            // Προσθήκη προηγούμενων θεραπειών
+            const priorText = document.getElementById('prior_treatments').value;
+            if (priorText) {
+                const drugs = priorText.split(',').map(d => d.trim());
+                drugs.forEach(drug => {
+                    data.treatments.push({ drug: drug, duration: '', response: '' });
+                });
+            }
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify(data)
+                });
+                
+                const report = await response.json();
+                
+                if (!response.ok) {
+                    errorDiv.innerHTML = report.error || 'Server error';
+                    errorDiv.style.display = 'block';
+                    resultDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Εμφάνιση του report
+                let html = '<h3>QGI Oncology Report</h3>';
+                html += `<p><strong>Patient:</strong> ${report.patient_id}</p>`;
+                html += `<p><strong>Date:</strong> ${new Date(report.timestamp).toLocaleDateString()}</p>`;
+                html += '<hr>';
+                html += `<p><strong>RECIST:</strong> ${report.recist} - ${report.tumor_response}</p>`;
+                html += `<p><strong>ctDNA Trend:</strong> ${report.ctdna_trend}</p>`;
+                html += '<hr>';
+                html += '<div style="background:#e6f7ff; padding:10px; border-radius:8px;">';
+                html += `<strong>💊 Προτεινόμενη Θεραπεία:</strong><br>`;
+                html += `<strong>${report.recommendation.drug}</strong><br>`;
+                html += `Κατηγορία: ${report.recommendation.drug_class}<br>`;
+                html += `Δοσολογία: ${report.recommendation.dosing}<br>`;
+                html += `Αποτελεσματικότητα: ${report.recommendation.efficacy}<br>`;
+                html += `Διείσδυση ΚΝΣ: ${report.recommendation.cns_penetration}<br>`;
+                html += `Τοξικότητα: ${report.recommendation.toxicity}<br>`;
+                html += `C-index: ${report.recommendation.c_index}<br>`;
+                html += `Αιτιολόγηση: ${report.recommendation.rationale}`;
+                html += '</div>';
+                html += '<hr>';
+                html += '<p><small>' + report.disclaimer + '</small></p>';
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (e) {
+                errorDiv.innerHTML = 'Server unreachable. Make sure the API is running and ngrok is active.';
+                errorDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
