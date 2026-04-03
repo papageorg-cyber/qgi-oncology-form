@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QGI 12 Oncology | Complete Clinical Data Form v5.0 (API Integration)</title>
+    <title>QGI Oncology | Complete Clinical Data Form v5.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,6 +42,9 @@
         .completeness-mid { color: #f59e0b; }
         .completeness-low { color: #ef4444; }
         .sub-fieldset { margin-left: 20px; padding-left: 10px; border-left: 2px solid #cbd5e1; margin-top: 5px; }
+        .researcher-info { margin-top: 20px; padding: 12px; background: #e8f0fe; border-radius: 10px; text-align: center; font-size: 0.75rem; border-top: 1px solid #1a3e6f; }
+        .researcher-info a { color: #1a3e6f; text-decoration: none; }
+        .researcher-info a:hover { text-decoration: underline; }
         @media (max-width: 1300px) { .two-columns { flex-direction: column; } .report-section { position: static; max-height: none; } }
         .loading { text-align: center; padding: 50px; }
     </style>
@@ -49,7 +52,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>🎗️ QGI 12 Oncology Module | Complete Clinical Data Form v5.0</h1>
+        <h1>🎗️ QGI Oncology Module | Complete Clinical Data Form v5.0</h1>
         <p>70+ Fields | 8 Treatment Categories | 150+ Drugs | API Integration | QGI Logic Hidden</p>
     </div>
 
@@ -223,6 +226,15 @@
                     <button type="button" class="btn-export" onclick="exportData()">📤 Εξαγωγή JSON</button>
                     <button type="button" class="btn-pdf" id="pdfBtn" style="display: block;" onclick="exportPDF()">📄 Εξαγωγή PDF</button>
                 </div>
+
+                <!-- ΣΤΟΙΧΕΙΑ ΕΡΕΥΝΗΤΗ -->
+                <div class="researcher-info">
+                    <strong>Quantum Geometry Interface (QGI)</strong><br>
+                    Nikolaos Papageorgiou - Independent Researcher<br>
+                    📧 <a href="mailto:papageorg@gmail.com">papageorg@gmail.com</a> | 
+                    📞 +30 6996940452<br>
+                    <span style="font-size: 0.65rem;">© QGI Oncology Module v5.0 | DOI: 10.5281/zenodo.18928632</span>
+                </div>
             </form>
         </div>
 
@@ -305,7 +317,6 @@
         'ngrok-skip-browser-warning': 'true'
     };
 
-    // Helper functions
     function updateDrugGroup(catSel) {
         let entry = catSel.closest('.treatment-entry');
         let groupSel = entry.querySelector('.treatment-group');
@@ -630,12 +641,12 @@
             <div class="recommendation-card"><strong>${rec.drug}</strong><br>Κατηγορία: ${rec.drug_class}<br>Δοσολογία: ${rec.dosing}<br>Αποτελεσματικότητα: ${rec.efficacy}<br>Διείσδυση ΚΝΣ: ${rec.cns_penetration}<br>C-index: ${rec.c_index}<br>Αιτιολόγηση: ${rec.rationale}</div>
             <div class="section-title">💊 Δοσολογία & Προσαρμογή</div>
             <div style="background:#ecfdf5;padding:8px;border-radius:8px;">${rec.dosing}<br>
-            <table class="dosage-table"><tr><td>Βάρος</td><td>${weight} kg</td><td>Τυπική δόση</td></tr>
+            <table class="dosage-table"><tr><tr>Βάρος</td><td>${weight} kg</td><td>Τυπική δόση</td></tr>
             <tr><td>BSA</td><td>${bsa} m²</td><td>Τυπική δόση</td></tr>
             <tr><td>Κρεατινίνη</td><td>${report.creatinine} mg/dL</td><td>${report.creatinine <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση 50%'}</td></tr>
             <tr><td>Bilirubin</td><td>${report.bilirubin} mg/dL</td><td>${report.bilirubin <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση δόσης'}</td></tr>
             <tr><td>INR</td><td>${report.inr}</td><td>${report.inr <= 1.5 ? 'Εντός ορίων' : 'Προσοχή αιμορραγία'}</td></tr>
-            </table></div>
+            <tr></div>
             <div class="section-title">⚠️ Ασφάλεια & Παρακολούθηση</div>
             <ul><li>Συχνές: ${report.safety_notes?.common || 'N/A'}</li>
             <li>Σοβαρές: ${report.safety_notes?.serious || 'N/A'}</li>
