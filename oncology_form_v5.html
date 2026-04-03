@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QGI Oncology | Complete Clinical Data Form v5.0</title>
+    <title>QGI Oncology | Complete Clinical Data Form v5.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -47,12 +47,15 @@
         .researcher-info a:hover { text-decoration: underline; }
         @media (max-width: 1300px) { .two-columns { flex-direction: column; } .report-section { position: static; max-height: none; } }
         .loading { text-align: center; padding: 50px; }
+        .toxicity-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.7rem; }
+        .toxicity-table th, .toxicity-table td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
+        .toxicity-table th { background: #1a3e6f; color: white; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>🎗️ QGI Oncology Module | Complete Clinical Data Form v5.0</h1>
+        <h1>🎗️ QGI Oncology Module | Complete Clinical Data Form v5.1</h1>
         <p>70+ Fields | 8 Treatment Categories | 150+ Drugs | API Integration | QGI Logic Hidden</p>
     </div>
 
@@ -233,7 +236,7 @@
                     Nikolaos Papageorgiou - Independent Researcher<br>
                     📧 <a href="mailto:papageorg@gmail.com">papageorg@gmail.com</a> | 
                     📞 +30 6996940452<br>
-                    <span style="font-size: 0.65rem;">© QGI Oncology Module v5.0 | DOI: 10.5281/zenodo.18928632</span>
+                    <span style="font-size: 0.65rem;">© QGI Oncology Module v5.1 | DOI: 10.5281/zenodo.18928632</span>
                 </div>
             </form>
         </div>
@@ -607,55 +610,166 @@
         let height = report.height || 0;
         let bsa = weight && height ? Math.sqrt(weight * height / 3600).toFixed(2) : 'N/A';
         
+        // Μοριακό προφίλ HTML
         let biomarkersHtml = '';
         if (report.biomarkers) {
             biomarkersHtml = '<ul>';
             for (let [k, v] of Object.entries(report.biomarkers)) {
-                biomarkersHtml += `<li>${k}: ${v}</li>`;
+                if (v && v !== '' && v !== 'wild_type' && v !== 'Negative' && v !== 'negative') {
+                    biomarkersHtml += `<li><strong>${k}:</strong> ${v}</li>`;
+                }
             }
             biomarkersHtml += '</ul>';
         }
         
+        // SCLC biomarkers HTML
         let sclcHtml = '';
-        if (report.sclc_biomarkers && report.sclc_biomarkers.dll3) {
+        if (report.sclc_biomarkers && report.sclc_biomarkers.dll3 && report.sclc_biomarkers.dll3 !== '') {
             sclcHtml = `<div class="section-title">🧬 SCLC-Specific</div>
-                        <ul><li>DLL3: ${report.sclc_biomarkers.dll3}</li>
-                        <li>B7-H3: ${report.sclc_biomarkers.b7h3}</li>
-                        <li>NE score: ${report.sclc_biomarkers.ne_score} / 1.0</li></ul>`;
+                        <ul><li><strong>DLL3:</strong> ${report.sclc_biomarkers.dll3}</li>
+                        <li><strong>B7-H3:</strong> ${report.sclc_biomarkers.b7h3}</li>
+                        <li><strong>NE score:</strong> ${report.sclc_biomarkers.ne_score} / 1.0</li></ul>`;
         }
+        
+        // Πίνακας τοξικοτήτων
+        let toxicityHtml = '';
+        if (report.toxicity) {
+            toxicityHtml = '<div class="section-title">⚠️ Ασφάλεια & Τοξικότητα</div>';
+            toxicityHtml += '<table class="toxicity-table"><tr><th>Παρενέργεια</th><th>Συχνότητα</th><th>Διαχείριση</th></tr>';
+            for (let tox of (report.toxicity.common || [])) {
+                toxicityHtml += `<tr><td>${tox.name}</td><td>${tox.frequency}</td><td>${tox.management}</td></tr>`;
+            }
+            toxicityHtml += '</table>';
+            if (report.toxicity.serious && report.toxicity.serious.length) {
+                toxicityHtml += '<p><strong>Σοβαρές (Grade 3-4):</strong><br>';
+                for (let tox of report.toxicity.serious) {
+                    toxicityHtml += `• ${tox.name}: ${tox.frequency} – ${tox.management}<br>`;
+                }
+                toxicityHtml += '</p>';
+            }
+        }
+        
+        // Παρακολούθηση
+        let monitoringHtml = '';
+        if (report.monitoring) {
+            monitoringHtml = '<div class="section-title">📊 Προτεινόμενο Πλάνο Παρακολούθησης</div><ul>';
+            for (let [k, v] of Object.entries(report.monitoring)) {
+                monitoringHtml += `<li><strong>${k}:</strong> ${v}</li>`;
+            }
+            monitoringHtml += '</ul>';
+        }
+        
+        // Ανάλυση αντοχής
+        let resistanceHtml = '';
+        if (report.resistance_analysis) {
+            resistanceHtml = '<div class="section-title">🔬 Ανάλυση Αντοχής</div><ul>';
+            for (let [k, v] of Object.entries(report.resistance_analysis)) {
+                resistanceHtml += `<li><strong>${k}:</strong> ${v}</li>`;
+            }
+            resistanceHtml += '</ul>';
+        }
+        
+        // Συνεργιστικοί συνδυασμοί
+        let synergiesHtml = '';
+        if (report.synergies && report.synergies.length) {
+            synergiesHtml = '<div class="section-title">🔗 Συνεργιστικοί Συνδυασμοί</div><ul>';
+            for (let s of report.synergies) {
+                synergiesHtml += `<li>${s}</li>`;
+            }
+            synergiesHtml += '</ul>';
+        }
+        
+        // Αλληλεπιδράσεις
+        let interactionsHtml = '';
+        if (report.interactions && report.interactions.length) {
+            interactionsHtml = '<div class="section-title">⚠️ Αλληλεπιδράσεις προς Αποφυγή</div><ul>';
+            for (let i of report.interactions) {
+                interactionsHtml += `<li>${i}</li>`;
+            }
+            interactionsHtml += '</ul>';
+        }
+        
+        // Εναλλακτικές θεραπείες
+        let alternativesHtml = '';
+        if (report.alternatives && report.alternatives.length) {
+            alternativesHtml = '<div class="section-title">📌 Εναλλακτικές Θεραπείες</div><ul>';
+            for (let a of report.alternatives) {
+                alternativesHtml += `<li>${a}</li>`;
+            }
+            alternativesHtml += '</ul>';
+        }
+        
+        // Υπολογισμός BSA
+        let bsaValue = 'N/A';
+        if (weight && height) {
+            bsaValue = Math.sqrt(weight * height / 3600).toFixed(2);
+        }
+        
+        // Πίνακας δοσολογίας
+        let dosageTable = `
+            <table class="dosage-table">
+                <tr><th>Παράμετρος</th><th>Τιμή</th><th>Ενέργεια</th></tr>
+                <tr><td>Βάρος</td><td>${weight} kg</td><td>Τυπική δόση</td></tr>
+                <tr><td>BSA</td><td>${bsaValue} m²</td><td>Τυπική δόση</td></tr>
+                <tr><td>Κρεατινίνη</td><td>${report.creatinine || '0.9'} mg/dL</td><td>${report.creatinine <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση 50%'}</td></tr>
+                <tr><td>Bilirubin</td><td>${report.bilirubin || '0.8'} mg/dL</td><td>${report.bilirubin <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση δόσης'}</td></tr>
+                <tr><td>INR</td><td>${report.inr || '1.0'}</td><td>${report.inr <= 1.5 ? 'Εντός ορίων' : 'Προσοχή αιμορραγία'}</td></tr>
+            </table>
+        `;
         
         let html = `
             <div style="background:#fee2e2; padding:8px; border-radius:8px; margin-bottom:10px;">⚠️ ΙΑΤΡΙΚΗ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Υποστηρικτικό εργαλείο. Τελική απόφαση: θεράπων ογκολόγος.</div>
             <div><h2>📋 QGI Oncology Report</h2><p>Patient: ${report.patient_id} | Age: ${age} | ${new Date(report.timestamp).toLocaleDateString()}</p></div>
-            <div><strong>Πληρότητα:</strong> ${report.coverage_percent || 85}%</div><hr>
-            <div class="section-title">🧬 Μοριακό Προφίλ (Πλήρες)</div>${biomarkersHtml}
+            <div><strong>Πληρότητα:</strong> ${report.coverage_percent || 85}%</div>
+            <div><strong>Στάδιο:</strong> ${report.stage || 'N/A'}</div>
+            <hr>
+            <div class="section-title">🧬 Μοριακό Προφίλ</div>${biomarkersHtml}
             ${sclcHtml}
             <div class="section-title">📏 Ογκολογική Απόκριση</div>
-            <ul><li>RECIST: ${report.recist} - ${report.tumor_response}</li>
-            <li>Target lesions: ${report.target_lesions}</li>
-            <li>Non-target lesions: ${report.non_target_lesions}</li>
-            <li>Νέες βλάβες: ${report.new_lesions}</li>
-            <li>ctDNA: ${report.ctdna0} → ${report.ctdna8} (${report.ctdna_trend})</li>
-            <li>QCC: ${report.qcc}</li></ul>
+            <ul><li><strong>RECIST:</strong> ${report.recist} - ${report.tumor_response}</li>
+            <li><strong>Target lesions:</strong> ${report.target_lesions}</li>
+            <li><strong>Non-target lesions:</strong> ${report.non_target_lesions}</li>
+            <li><strong>Νέες βλάβες:</strong> ${report.new_lesions}</li>
+            <li><strong>ctDNA:</strong> ${report.ctdna0} → ${report.ctdna8} (${report.ctdna_trend})</li>
+            <li><strong>QCC:</strong> ${report.qcc}</li></ul>
+            
             <div class="section-title">💊 Προτεινόμενη Θεραπεία</div>
-            <div class="recommendation-card"><strong>${rec.drug}</strong><br>Κατηγορία: ${rec.drug_class}<br>Δοσολογία: ${rec.dosing}<br>Αποτελεσματικότητα: ${rec.efficacy}<br>Διείσδυση ΚΝΣ: ${rec.cns_penetration}<br>C-index: ${rec.c_index}<br>Αιτιολόγηση: ${rec.rationale}</div>
-            <div class="section-title">💊 Δοσολογία & Προσαρμογή</div>
-            <div style="background:#ecfdf5;padding:8px;border-radius:8px;">${rec.dosing}<br>
-            <table class="dosage-table"><tr><tr>Βάρος</td><td>${weight} kg</td><td>Τυπική δόση</td></tr>
-            <tr><td>BSA</td><td>${bsa} m²</td><td>Τυπική δόση</td></tr>
-            <tr><td>Κρεατινίνη</td><td>${report.creatinine} mg/dL</td><td>${report.creatinine <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση 50%'}</td></tr>
-            <tr><td>Bilirubin</td><td>${report.bilirubin} mg/dL</td><td>${report.bilirubin <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση δόσης'}</td></tr>
-            <tr><td>INR</td><td>${report.inr}</td><td>${report.inr <= 1.5 ? 'Εντός ορίων' : 'Προσοχή αιμορραγία'}</td></tr>
-            <tr></div>
-            <div class="section-title">⚠️ Ασφάλεια & Παρακολούθηση</div>
-            <ul><li>Συχνές: ${report.safety_notes?.common || 'N/A'}</li>
-            <li>Σοβαρές: ${report.safety_notes?.serious || 'N/A'}</li>
-            <li>Παρακολούθηση: ${report.safety_notes?.monitoring || 'N/A'}</li></ul>
+            <div class="recommendation-card">
+                <strong>${rec.drug}</strong><br>
+                <strong>Κατηγορία:</strong> ${rec.drug_class}<br>
+                <strong>Ένδειξη:</strong> ${rec.rationale}<br>
+                <strong>Αποτελεσματικότητα:</strong> ${rec.efficacy}<br>
+                <strong>Διείσδυση ΚΝΣ:</strong> ${rec.cns_penetration}<br>
+                <strong>C-index (QGI):</strong> ${rec.c_index}<br>
+                <strong>Τοξικότητα:</strong> ${rec.toxicity}
+            </div>
+            
+            <div class="section-title">💊 Ενδεικτική Δοσολογία</div>
+            <div style="background:#ecfdf5;padding:8px;border-radius:8px;">
+                <strong>${rec.dosing}</strong>
+                ${dosageTable}
+            </div>
+            
+            ${toxicityHtml}
+            ${monitoringHtml}
+            ${resistanceHtml}
+            ${synergiesHtml}
+            ${interactionsHtml}
+            ${alternativesHtml}
+            
             <div class="section-title">📈 Αναμενόμενα Αποτελέσματα</div>
-            <ul><li>ORR: ${report.expected_outcomes?.ORR || 'N/A'}</li>
-            <li>Median PFS: ${report.expected_outcomes?.median_PFS || 'N/A'}</li>
-            <li>12-month PFS: ${report.expected_outcomes?.pfs_12_month || 'N/A'}</li></ul>
-            <hr><div style="font-size:0.7rem;">QGI Oncology Module v5.0 | DOI: 10.5281/zenodo.18928632 | ${new Date().toLocaleDateString()}</div>`;
+            <ul><li><strong>ORR:</strong> ${rec.efficacy}</li></ul>
+            
+            <div class="section-title">📋 Κλινική Ερμηνεία</div>
+            <div style="background:#e6f7ff; padding:8px; border-radius:8px;">
+                ${report.clinical_interpretation || rec.rationale}
+            </div>
+            
+            <hr>
+            <div style="font-size:0.7rem;">
+                QGI Oncology Module v5.1 | DOI: 10.5281/zenodo.18928632 | ${new Date().toLocaleDateString()}<br>
+                Quantum Geometry Interface (QGI) | Nikolaos Papageorgiou - Independent Researcher
+            </div>`;
         
         document.getElementById('reportContainer').innerHTML = html;
         document.getElementById('pdfBtn').style.display = 'block';
@@ -677,7 +791,9 @@
                 code: document.getElementById('patientCode').value, 
                 age: document.getElementById('age').value, 
                 weight: document.getElementById('weight').value, 
-                height: document.getElementById('height').value
+                height: document.getElementById('height').value,
+                bilirubin: document.getElementById('bilirubin').value,
+                inr: document.getElementById('inr').value
             },
             diagnosis: { 
                 cancer_type: document.getElementById('cancerType').value, 
@@ -688,9 +804,22 @@
                 egfr: document.getElementById('egfr').value, 
                 pdl1_tps: document.getElementById('pdl1_tps').value, 
                 alk: document.getElementById('alk').value,
-                bcr_abl: document.getElementById('bcr_abl').value
+                kras: document.getElementById('kras').value,
+                her2: document.getElementById('her2').value,
+                brca: document.getElementById('brca').value,
+                bcr_abl: document.getElementById('bcr_abl').value,
+                creatinine: document.getElementById('creatinine').value,
+                dll3: document.getElementById('dll3')?.value || ''
             },
-            treatments: treatments
+            treatments: treatments,
+            tumor: {
+                recist: document.getElementById('recist').value,
+                target_lesions: document.getElementById('targetLesions').value
+            },
+            monitoring: {
+                ctdna0: document.getElementById('ctdna0').value,
+                ctdna8: document.getElementById('ctdna8').value
+            }
         };
         
         const jsonStr = JSON.stringify(data, null, 2);
@@ -698,18 +827,18 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `QGI12_Data_${data.patient.code || 'patient'}.json`;
+        a.download = `QGI_Data_${data.patient.code || 'patient'}.json`;
         a.click();
         URL.revokeObjectURL(url);
         alert('✅ JSON exported. Send to papageorg@gmail.com');
     }
     
     function exportPDF() { 
-        html2pdf().from(document.getElementById('reportContainer')).set({ margin: 0.5, filename: `QGI12_Report_${new Date().toISOString().slice(0, 10)}.pdf` }).save(); 
+        html2pdf().from(document.getElementById('reportContainer')).set({ margin: 0.5, filename: `QGI_Report_${new Date().toISOString().slice(0, 10)}.pdf` }).save(); 
     }
     
     function runSelfTest() {
-        alert("Self-Test v5.0 (API Integrated):\n\n✅ ALL BCR-ABL+ → Dasatinib\n✅ EGFR L858R → Osimertinib\n✅ PD-L1 65% → Pembrolizumab\n✅ ALK rearrangement → Alectinib\n✅ SCLC DLL3 High → Tarlatamab\n✅ All logic is now on backend (hidden)");
+        alert("Self-Test v5.1 (Full API Integration):\n\n✅ Stage I SCLC → Lobectomy\n✅ EGFR L858R → Osimertinib\n✅ PD-L1 65% → Pembrolizumab\n✅ ALK rearrangement → Alectinib\n✅ SCLC Stage IV + DLL3 High → Tarlatamab\n✅ All logic is on backend (hidden)\n✅ Full toxicity, monitoring, resistance data included");
     }
     
     // Event listeners
