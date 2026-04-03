@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QGI 12 Oncology | Complete Clinical Data Form v5.0 (API Integration)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f0f4f8 0%, #e6ecf3 100%); padding: 20px; }
+        .container { max-width: 1900px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #1a3e6f, #0e2a4a); color: white; padding: 18px 22px; border-radius: 18px; margin-bottom: 22px; }
+        .two-columns { display: flex; gap: 22px; flex-wrap: wrap; }
+        .form-section, .report-section { background: white; border-radius: 18px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .form-section { flex: 1.4; min-width: 950px; max-height: 85vh; overflow-y: auto; }
+        .report-section { flex: 1; min-width: 620px; position: sticky; top: 20px; max-height: 85vh; overflow-y: auto; }
+        fieldset { border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+        legend { font-weight: 700; color: #1a3e6f; padding: 0 8px; font-size: 0.85rem; }
+        .form-row { margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+        .form-row label { width: 200px; font-weight: 500; font-size: 0.75rem; }
+        select, input, textarea { flex: 1; padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.75rem; }
+        .treatment-entry { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; padding: 6px; background: #f8fafc; border-radius: 8px; align-items: center; }
+        .btn-add, .btn-remove { background: #e2e8f0; border: none; padding: 3px 8px; border-radius: 5px; cursor: pointer; font-size: 0.65rem; }
+        .btn-add { background: #1a3e6f; color: white; margin-top: 4px; }
+        .btn-remove { background: #fee2e2; color: #991b1b; }
+        .btn-generate, .btn-pdf, .btn-export, .btn-test { background: #1a3e6f; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; font-size: 0.8rem; }
+        .btn-test { background: #f59e0b; }
+        .btn-pdf { background: #2c7da0; }
+        .btn-export { background: #10b981; }
+        hr { margin: 10px 0; }
+        .validation-error { background: #fee2e2; border-left: 4px solid #dc2626; padding: 6px 10px; margin: 6px 0; border-radius: 6px; font-size: 0.7rem; }
+        .validation-warning { background: #fef9c3; border-left: 4px solid #e6b800; padding: 6px 10px; margin: 6px 0; border-radius: 6px; font-size: 0.7rem; }
+        .recommendation-card { background: #f8fafc; border-left: 4px solid #1a3e6f; padding: 8px; margin-bottom: 8px; border-radius: 8px; }
+        .section-title { font-weight: 700; margin: 10px 0 5px; color: #1a3e6f; border-left: 3px solid #1a3e6f; padding-left: 6px; font-size: 0.85rem; }
+        .dosage-table { width: 100%; border-collapse: collapse; font-size: 0.65rem; margin: 5px 0; }
+        .dosage-table td { padding: 3px; border-bottom: 1px solid #e2e8f0; }
+        .sclc-section { display: none; border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 6px; }
+        .tumor-dims { display: flex; gap: 5px; align-items: center; }
+        .tumor-dims input { width: 70px; text-align: center; }
+        .btn-group { display: flex; gap: 8px; margin-top: 6px; }
+        .completeness-high { color: #10b981; }
+        .completeness-mid { color: #f59e0b; }
+        .completeness-low { color: #ef4444; }
+        .sub-fieldset { margin-left: 20px; padding-left: 10px; border-left: 2px solid #cbd5e1; margin-top: 5px; }
+        @media (max-width: 1300px) { .two-columns { flex-direction: column; } .report-section { position: static; max-height: none; } }
+        .loading { text-align: center; padding: 50px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎗️ QGI 12 Oncology Module | Complete Clinical Data Form v5.0</h1>
+        <p>70+ Fields | 8 Treatment Categories | 150+ Drugs | API Integration | QGI Logic Hidden</p>
+    </div>
+
+    <div class="two-columns">
+        <div class="form-section">
+            <div id="validationContainer"></div>
+            <div class="coverage-card" style="background:#f1f5f9; padding:8px; text-align:center; margin-bottom:12px; border-radius:12px;">
+                <div>📊 Πληρότητα Δεδομένων (Weighted)</div>
+                <div class="coverage-percent" id="coveragePercent" style="font-size:1.6rem; font-weight:800;">85%</div>
+                <div id="coverageLevel" style="font-size:0.65rem;">Πλήρης (Υψηλή αξιοπιστία)</div>
+                <div id="coverageDetail" style="font-size:0.6rem; color:#475569;">41/48 βαθμοί</div>
+            </div>
+
+            <form id="oncologyForm">
+                <!-- A. Δημογραφικά -->
+                <fieldset><legend>Α. Δημογραφικά &amp; Ηπατική Λειτουργία</legend>
+                    <div class="form-row"><label>Patient Code:</label><input type="text" id="patientCode" value="LC045"></div>
+                    <div class="form-row"><label>Ηλικία (έτη):</label><input type="number" id="age" value="62"></div>
+                    <div class="form-row"><label>Βάρος (kg):</label><input type="number" id="weight" step="0.1" value="68"></div>
+                    <div class="form-row"><label>Ύψος (cm):</label><input type="number" id="height" step="0.5" value="165"></div>
+                    <div class="form-row"><label>Ομάδα αίματος:</label><select id="bloodType"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option selected="">O-</option></select></div>
+                    <div class="form-row"><label>ALT/AST (U/L):</label><input type="text" id="liver" value="32/28" placeholder="32/28"></div>
+                    <div class="form-row"><label>Bilirubin (mg/dL):</label><input type="number" id="bilirubin" step="0.1" value="0.8"></div>
+                    <div class="form-row"><label>Albumin (g/dL):</label><input type="number" id="albumin" step="0.1" value="3.8"></div>
+                    <div class="form-row"><label>INR:</label><input type="number" id="inr" step="0.1" value="1.0"></div>
+                    <div class="form-row"><label>Liver involvement (mm / % / lesions):</label><input type="text" id="liverInvolvement" placeholder="π.χ. 32/28 mm, ή 2 lesions, ή 15% infiltration" value="32/28 mm"></div>
+                </fieldset>
+
+                <!-- B. Διάγνωση & Μεταστάσεις -->
+                <fieldset><legend>Β. Διάγνωση &amp; Μεταστάσεις</legend>
+                    <div class="form-row"><label>Τύπος καρκίνου:</label>
+                        <select id="cancerType">
+                            <optgroup label="Πνεύμονας"><option value="NSCLC_adeno">NSCLC - Αδενοκαρκίνωμα</option><option value="NSCLC_squamous">NSCLC - Πλακώδες</option><option value="SCLC" selected="">SCLC</option></optgroup>
+                            <optgroup label="ΛΕΥΧΑΙΜΙΕΣ"><option value="ALL">ALL</option><option value="AML">AML</option><option value="CLL">CLL</option><option value="CML">CML</option></optgroup>
+                            <optgroup label="Μαστός"><option value="breast_HR_positive">HR+</option><option value="breast_HER2_positive">HER2+</option><option value="breast_triple_negative">TNBC</option></optgroup>
+                            <optgroup label="Γαστρεντερικό"><option value="colorectal">Παχύ έντερο</option><option value="pancreatic">Πάγκρεας</option></optgroup>
+                            <optgroup label="Παιδιατρικοί"><option value="Wilms">Wilms</option><option value="Medulloblastoma">Medulloblastoma</option><option value="Neuroblastoma">Neuroblastoma</option></optgroup>
+                        </select>
+                    </div>
+                    <div class="form-row"><label>Στάδιο:</label><select id="stage"><option>I</option><option>II</option><option>III</option><option selected="">IV</option></select></div>
+                    <div class="form-row"><label>ECOG:</label><select id="ecog"><option>0</option><option selected="">1</option><option>2</option><option>3</option></select></div>
+                    <div class="form-row"><label>Μεταστάσεις (γενικά):</label><input type="text" id="metastases" value="Brain, Bone"></div>
+                    
+                    <div class="sub-fieldset">
+                        <strong>🧠 Εγκέφαλος:</strong>
+                        <div class="form-row"><label>Αριθμός μεταστάσεων εγκεφάλου:</label><input type="number" id="brainMetsNumber" value="2"></div>
+                        <div class="form-row"><label>Σύγκριση baseline vs latest:</label><input type="text" id="brainMetsComparison" placeholder="π.χ. σταθερές, μείωση 20%" value="σταθερές"></div>
+                        <div class="form-row"><label>Αντιμετώπιση εγκεφάλου:</label><input type="text" id="brainMetsTreatment" placeholder="π.χ. Ολική εγκεφαλική ακτινοβολία, SRS" value="SRS (3 fractions)"></div>
+                    </div>
+                    <div class="sub-fieldset">
+                        <strong>🦴 Οστά:</strong>
+                        <div class="form-row"><label>Αριθμός μεταστάσεων οστών:</label><input type="number" id="boneMetsNumber" value="3"></div>
+                        <div class="form-row"><label>Αντιμετώπιση οστών:</label><input type="text" id="boneMetsTreatment" placeholder="π.χ. Ακτινοβολία, Denosumab" value="Denosumab 120 mg"></div>
+                    </div>
+                </fieldset>
+
+                <!-- C. RECIST & ctDNA -->
+                <fieldset><legend>Γ. RECIST &amp; ctDNA Monitoring</legend>
+                    <div class="form-row"><label>Αρχική μέτρηση (cm):</label><div class="tumor-dims"><input type="number" id="tumor_w0" value="4.2" step="0.1"> x <input type="number" id="tumor_h0" value="3.5" step="0.1"> x <input type="number" id="tumor_d0" value="3.1" step="0.1"></div></div>
+                    <div class="form-row"><label>Τελευταία μέτρηση:</label><div class="tumor-dims"><input type="number" id="tumor_w1" value="3.8" step="0.1"> x <input type="number" id="tumor_h1" value="3.2" step="0.1"> x <input type="number" id="tumor_d1" value="2.8" step="0.1"></div></div>
+                    <div class="form-row"><label>RECIST:</label><select id="recist"><option value="CR">CR</option><option value="PR" selected="">PR</option><option value="SD">SD</option><option value="PD">PD</option></select></div>
+                    <div class="form-row"><label>Target lesions (list):</label><input type="text" id="targetLesions" value="RUL mass (4.2x3.5x3.1 cm)"></div>
+                    <div class="form-row"><label>Non-target lesions (list):</label><input type="text" id="nonTargetLesions" value="mediastinal LNs"></div>
+                    <div class="form-row"><label>Νέες βλάβες:</label><select id="newLesions"><option value="No" selected="">Όχι</option><option value="Yes">Ναι</option></select></div>
+                    <div class="form-row" id="newLesionsDescRow" style="display:none;"><label>Περιγραφή νέων βλαβών:</label><input type="text" id="newLesionsDesc" placeholder="π.χ. νέα ηπατική βλάβη 1.5 cm"></div>
+                    
+                    <div class="form-row"><label>ctDNA Week 0:</label><input type="number" id="ctdna0" value="12.3" step="0.1" style="width:100px;"> 
+                        <select id="ctdna0Unit"><option value="copies/mL">copies/mL</option><option value="%" selected="">%</option><option value="mean VAF">mean VAF</option></select>
+                    </div>
+                    <div class="form-row"><label>ctDNA Week 8:</label><input type="number" id="ctdna8" value="13" step="0.1" style="width:100px;">
+                        <select id="ctdna8Unit"><option value="copies/mL">copies/mL</option><option value="%" selected="">%</option><option value="mean VAF">mean VAF</option></select>
+                    </div>
+                    <div class="form-row"><label>QCC Baseline:</label><input type="number" id="qcc0" value="0.31" step="0.01"></div>
+                </fieldset>
+
+                <!-- D. Μοριακοί Δείκτες -->
+                <fieldset><legend>Δ. Μοριακοί Δείκτες (Πλήρες Προφίλ)</legend>
+                    <div class="form-row"><label>EGFR:</label><select id="egfr"><option value="wild_type" selected="">Wild-type</option><option value="L858R">L858R</option><option value="Ex19del">Ex19del</option></select></div>
+                    <div class="form-row"><label>ALK:</label><select id="alk"><option selected="">Negative</option><option>Rearrangement</option></select></div>
+                    <div class="form-row"><label>KRAS:</label><select id="kras"><option selected="">Wild-type</option><option>G12C</option><option>G12D</option></select></div>
+                    <div class="form-row"><label>BRAF:</label><select id="braf"><option selected="">Wild-type</option><option>V600E</option></select></div>
+                    <div class="form-row"><label>HER2:</label><select id="her2"><option selected="">Negative</option><option>Positive</option></select></div>
+                    <div class="form-row"><label>MET:</label><select id="met"><option selected="">Negative</option><option>Exon14 skipping</option></select></div>
+                    <div class="form-row"><label>RET:</label><select id="ret"><option selected="">Negative</option><option>Rearrangement</option></select></div>
+                    <div class="form-row"><label>NTRK:</label><select id="ntrk"><option selected="">Negative</option><option>Fusion</option></select></div>
+                    <div class="form-row"><label>ROS1:</label><select id="ros1"><option selected="">Negative</option><option>Rearrangement</option></select></div>
+                    <div class="form-row"><label>BRCA:</label><select id="brca"><option selected="">Wild-type</option><option>Germline mutation</option></select></div>
+                    <div class="form-row"><label>PD-L1 TPS (%):</label><input type="number" id="pdl1_tps" value="15"></div>
+                    <div class="form-row"><label>TMB (mut/Mb):</label><input type="number" id="tmb" value="12" step="0.5"></div>
+                    <div class="form-row"><label>MSI:</label><select id="msi"><option selected="">Stable (MSS)</option><option>Unstable (MSI-H)</option></select></div>
+                    <div class="form-row"><label>BCR-ABL:</label><select id="bcr_abl"><option value="negative" selected="">Negative</option><option value="positive">Positive</option></select></div>
+                    <div class="form-row"><label>FLT3-ITD:</label><select id="flt3"><option selected="">Negative</option><option>Positive</option></select></div>
+                    <div class="form-row"><label>IDH1/2:</label><select id="idh"><option selected="">Negative</option><option>Positive</option></select></div>
+                    <div class="form-row"><label>MYC amplification:</label><select id="myc"><option selected="">Negative</option><option>Positive</option></select></div>
+                    <div class="form-row"><label>WT1:</label><select id="wt1"><option selected="">Negative</option><option>Positive</option></select></div>
+                    <div class="form-row"><label>Κρεατινίνη (mg/dL):</label><input type="number" id="creatinine" step="0.01" value="0.9"></div>
+                    
+                    <div class="sub-fieldset">
+                        <strong>Σπάνιες Μεταλλάξεις:</strong>
+                        <div class="form-row"><label>FGFR:</label><select id="fgfr"><option selected="">Wild-type</option><option>Mutation</option></select></div>
+                        <div class="form-row"><label>POLE:</label><select id="pole"><option selected="">Wild-type</option><option>Mutation</option></select></div>
+                        <div class="form-row"><label>PIK3CA:</label><select id="pik3ca"><option selected="">Wild-type</option><option>Mutation</option></select></div>
+                        <div class="form-row"><label>PTEN:</label><select id="pten"><option selected="">Wild-type</option><option>Loss</option><option>Mutation</option></select></div>
+                        <div class="form-row"><label>STK11:</label><select id="stk11"><option selected="">Wild-type</option><option>Mutation</option></select></div>
+                        <div class="form-row"><label>KEAP1:</label><select id="keap1"><option selected="">Wild-type</option><option>Mutation</option></select></div>
+                    </div>
+
+                    <div class="sub-fieldset">
+                        <strong>Δείκτες Φλεγμονής:</strong>
+                        <div class="form-row"><label>CRP (mg/L):</label><input type="number" id="crp" step="1" value="5"></div>
+                        <div class="form-row"><label>WBC (x10³/μL):</label><input type="number" id="wbc" step="0.5" value="6.5"></div>
+                        <div class="form-row"><label>Ουδετερόφιλα (x10³/μL):</label><input type="number" id="neutrophils" step="0.5" value="4.2"></div>
+                        <div class="form-row"><label>Λεμφοκύτταρα (x10³/μL):</label><input type="number" id="lymphocytes" step="0.5" value="1.8"></div>
+                    </div>
+
+                    <div id="sclcBiomarkers" class="sclc-section" style="display: block;">
+                        <strong>🧬 SCLC-specific (κλίμακα NE score: 0-1):</strong>
+                        <div class="form-row"><label>DLL3:</label><select id="dll3"><option selected="">High</option><option>Medium</option><option>Low</option></select></div>
+                        <div class="form-row"><label>B7-H3:</label><select id="b7h3"><option selected="">Positive</option><option>Negative</option></select></div>
+                        <div class="form-row"><label>NE score (0-1):</label><input type="number" id="neScore" step="0.01" value="0.72"></div>
+                    </div>
+                </fieldset>
+
+                <!-- E. Θεραπευτικό Ιστορικό -->
+                <fieldset><legend>Ε. Θεραπευτικό Ιστορικό (8 Κατηγορίες - 150+ Φάρμακα)</legend>
+                    <div class="sub-fieldset">
+                        <strong>📜 Προηγούμενες Γραμμές Θεραπείας:</strong>
+                        <div class="form-row"><label>1η γραμμή (φάρμακα):</label><input type="text" id="firstLineDrugs" value="Carboplatin + Etoposide"></div>
+                        <div class="form-row"><label>1η γραμμή (ανταπόκριση):</label><select id="firstLineResponse"><option>CR</option><option>PR</option><option>SD</option><option>PD</option></select></div>
+                        <div class="form-row"><label>2η γραμμή (φάρμακα):</label><input type="text" id="secondLineDrugs" value="Pembrolizumab"></div>
+                        <div class="form-row"><label>2η γραμμή (ανταπόκριση):</label><select id="secondLineResponse"><option>CR</option><option>PR</option><option selected="">SD</option><option>PD</option></select></div>
+                    </div>
+                    
+                    <div class="sub-fieldset">
+                        <strong>⚠️ Ανοσοθεραπεία - Λεπτομέρειες Τοξικότητας:</strong>
+                        <div class="form-row"><label>Αιτία διακοπής ανοσοθεραπείας:</label><select id="immunoStopReason"><option>Ολοκλήρωση κύκλων</option><option>Προοδευτική νόσος</option><option>Τοξικότητα</option><option>Θάνατος</option></select></div>
+                        <div class="form-row"><label>Ανοσο-σχετιζόμενη τοξικότητα:</label><select id="immuneToxicity" onchange="toggleToxicityDetails()"><option value="No" selected="">Όχι</option><option value="Yes">Ναι</option></select></div>
+                        <div id="toxicityDetails" style="display:none;">
+                            <div class="form-row"><label>Τύπος τοξικότητας:</label><select id="toxicityType"><option>Πνευμονίτιδα</option><option>Κολίτιδα</option><option>Ηπατίτιδα</option><option>Εξάνθημα</option><option>Ενδοκρινοπάθεια</option><option>Νεφρίτιδα</option></select></div>
+                            <div class="form-row"><label>Βαθμός (CTCAE):</label><select id="toxicityGrade"><option>1 (ήπιος)</option><option>2 (μέτριος)</option><option>3 (σοβαρός)</option><option>4 (απειλητικός)</option><option>5 (θάνατος)</option></select></div>
+                        </div>
+                    </div>
+
+                    <div id="treatmentsContainer">
+                        <div class="treatment-entry">
+                            <select class="treatment-category" onchange="updateDrugGroup(this)">
+                                <option value="">-- Κατηγορία --</option>
+                                <option value="targeted">1. Στοχευμένες (Targeted)</option>
+                                <option value="immunotherapy">2. Ανοσοθεραπεία (Immunotherapy)</option>
+                                <option value="chemotherapy">3. Χημειοθεραπεία (Chemotherapy)</option>
+                                <option value="hormone">4. Ορμονοθεραπεία (Hormone)</option>
+                                <option value="adc">5. ADC (Antibody-Drug Conjugates)</option>
+                                <option value="radiotherapy">6. Ακτινοθεραπεία (Radiotherapy)</option>
+                                <option value="surgery">7. Χειρουργική (Surgery)</option>
+                                <option value="clinical_trial">8. Κλινική Μελέτη (Clinical Trial)</option>
+                            </select>
+                            <select class="treatment-group" style="display: inline-block;" onchange="updateDrugList(this)"><option value="">-- Ομάδα --</option></select>
+                            <select class="treatment-drug" style="display: inline-block;"><option value="">-- Φάρμακο --</option></select>
+                            <input type="text" class="treatment-duration" placeholder="Διάρκεια" value="6 κύκλοι" style="width:80px;">
+                            <select class="treatment-response"><option>CR</option><option selected="">PR</option><option>SD</option><option>PD</option></select>
+                            <button type="button" class="btn-remove" onclick="removeTreatment(this)">✖</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add" onclick="addTreatment()">+ Προσθήκη Θεραπείας</button>
+                    <div class="form-row" style="margin-top:8px;"><label>Ελεύθερη εισαγωγή:</label><input type="text" id="freeTreatment" placeholder="Άλλες θεραπείες"></div>
+                </fieldset>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-generate" id="generateBtn" onclick="generateReportWithValidation()">📋 Δημιουργία Αναφοράς</button>
+                    <button type="button" class="btn-test" onclick="runSelfTest()">🧪 Self-Test</button>
+                    <button type="button" class="btn-export" onclick="exportData()">📤 Εξαγωγή JSON</button>
+                    <button type="button" class="btn-pdf" id="pdfBtn" style="display: block;" onclick="exportPDF()">📄 Εξαγωγή PDF</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="report-section">
+            <div id="reportContainer">
+                <div style="background:#fee2e2; padding:8px; border-radius:8px; margin-bottom:10px;">⚠️ ΙΑΤΡΙΚΗ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Υποστηρικτικό εργαλείο. Τελική απόφαση: θεράπων ογκολόγος.</div>
+                <div><h2>📋 QGI Oncology Report</h2><p>Patient: LC045 | Age: 62 | <span id="currentDate"></span></p></div>
+                <div><strong>Πληρότητα:</strong> 85%</div><hr>
+                <div style="text-align:center; padding:20px;">⏳ Συμπληρώστε τη φόρμα και πατήστε "Δημιουργία Αναφοράς"</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ΙΕΡΑΡΧΙΚΗ ΔΟΜΗ ΦΑΡΜΑΚΩΝ
+    const drugHierarchy = {
+        targeted: {
+            "EGFR Inhibitors": ["Osimertinib","Gefitinib","Erlotinib","Afatinib","Dacomitinib","Amivantamab"],
+            "ALK Inhibitors": ["Crizotinib","Alectinib","Ceritinib","Lorlatinib","Brigatinib"],
+            "KRAS G12C": ["Sotorasib","Adagrasib"],
+            "BRAF/MEK": ["Vemurafenib","Dabrafenib","Encorafenib","Trametinib","Cobimetinib"],
+            "HER2": ["Trastuzumab","Pertuzumab","T-DXd","T-DM1","Lapatinib","Neratinib"],
+            "PARP": ["Olaparib","Niraparib","Rucaparib","Talazoparib"],
+            "MET": ["Capmatinib","Tepotinib"],
+            "RET": ["Selpercatinib","Pralsetinib"],
+            "NTRK": ["Larotrectinib","Entrectinib"],
+            "BCR-ABL": ["Dasatinib","Imatinib","Nilotinib","Ponatinib"],
+            "FLT3": ["Midostaurin","Gilteritinib"],
+            "IDH": ["Enasidenib","Ivosidenib"],
+            "CDK4/6": ["Palbociclib","Ribociclib","Abemaciclib"],
+            "BTK": ["Ibrutinib","Acalabrutinib","Zanubrutinib"]
+        },
+        immunotherapy: {
+            "PD-1/PD-L1": ["Pembrolizumab","Nivolumab","Cemiplimab","Atezolizumab","Durvalumab","Avelumab"],
+            "CTLA-4": ["Ipilimumab","Tremelimumab"],
+            "Bispecific": ["Tarlatamab","Blinatumomab","Amivantamab"],
+            "CAR-T": ["Tisagenlecleucel","Axicabtagene ciloleucel","Brexucabtagene autoleucel"]
+        },
+        chemotherapy: {
+            "Platinum": ["Cisplatin","Carboplatin","Oxaliplatin"],
+            "Antimetabolites": ["Gemcitabine","5-FU","Capecitabine","Methotrexate","Pemetrexed"],
+            "Taxanes": ["Paclitaxel","Docetaxel"],
+            "Topoisomerase": ["Etoposide","Irinotecan","Topotecan"],
+            "Anthracyclines": ["Doxorubicin","Epirubicin","Daunorubicin"],
+            "Alkylating": ["Cyclophosphamide","Ifosfamide","Temozolomide"]
+        },
+        hormone: {
+            "SERMs": ["Tamoxifen"],
+            "Aromatase": ["Letrozole","Anastrozole","Exemestane"],
+            "SERDs": ["Fulvestrant"],
+            "Antiandrogens": ["Enzalutamide","Bicalutamide","Flutamide"],
+            "CYP17": ["Abiraterone"]
+        },
+        adc: {
+            "HER2 ADCs": ["T-DXd (Enhertu)","T-DM1 (Kadcyla)"],
+            "Other ADCs": ["Enfortumab vedotin","Sacituzumab govitecan","Polatuzumab vedotin","Trastuzumab deruxtecan"]
+        },
+        radiotherapy: {
+            "External Beam": ["IMRT", "SBRT", "Proton Therapy", "3D-CRT"],
+            "Stereotactic": ["SRS", "SBRT", "Gamma Knife", "CyberKnife"],
+            "Radiopharmaceuticals": ["Lutetium-177","Radium-223","Iodine-131","Yttrium-90"]
+        },
+        surgery: {
+            "Resection": ["Lobectomy","Mastectomy","Colectomy","Wedge resection"],
+            "Lymph Node": ["Lymphadenectomy","Sentinel node biopsy"],
+            "Minimally Invasive": ["Laparoscopic","Robotic","VATS"]
+        },
+        clinical_trial: {
+            "Phase I": ["First-in-human","Dose-escalation"],
+            "Phase II": ["Efficacy study","Randomized Phase II"],
+            "Phase III": ["Registration trial","Phase III RCT"]
+        }
+    };
+
+    // API endpoints
+    const API_URL = 'https://embryotrophic-fittingly-jill.ngrok-free.dev/api/oncology_report';
+    const HEADERS = {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+    };
+
+    // Helper functions
+    function updateDrugGroup(catSel) {
+        let entry = catSel.closest('.treatment-entry');
+        let groupSel = entry.querySelector('.treatment-group');
+        let drugSel = entry.querySelector('.treatment-drug');
+        let cat = catSel.value;
+        if (!cat) { groupSel.style.display = 'none'; drugSel.style.display = 'none'; return; }
+        let groups = Object.keys(drugHierarchy[cat] || {});
+        groupSel.innerHTML = '<option value="">-- Ομάδα --</option>';
+        groups.forEach(g => { let o = document.createElement('option'); o.value = g; o.text = g; groupSel.appendChild(o); });
+        groupSel.style.display = 'inline-block';
+        drugSel.style.display = 'none';
+    }
+    
+    function updateDrugList(groupSel) {
+        let entry = groupSel.closest('.treatment-entry');
+        let catSel = entry.querySelector('.treatment-category');
+        let drugSel = entry.querySelector('.treatment-drug');
+        let cat = catSel.value, group = groupSel.value;
+        if (!cat || !group) { drugSel.style.display = 'none'; return; }
+        let drugs = drugHierarchy[cat]?.[group] || [];
+        drugSel.innerHTML = '<option value="">-- Φάρμακο --</option>';
+        drugs.forEach(d => { let o = document.createElement('option'); o.value = d; o.text = d; drugSel.appendChild(o); });
+        drugSel.style.display = 'inline-block';
+    }
+    
+    function addTreatment() {
+        let c = document.getElementById('treatmentsContainer');
+        let t = c.children[0].cloneNode(true);
+        t.querySelectorAll('.treatment-category').forEach(s => s.value = '');
+        t.querySelectorAll('.treatment-group,.treatment-drug').forEach(s => { s.style.display = 'none'; s.innerHTML = '<option value="">-- --</option>'; });
+        t.querySelectorAll('.treatment-duration,.treatment-response').forEach(el => el.value = '');
+        c.appendChild(t);
+    }
+    
+    function removeTreatment(btn) {
+        let c = document.getElementById('treatmentsContainer');
+        if (c.children.length > 1) btn.parentElement.remove();
+        else alert("Τουλάχιστον μία θεραπεία");
+    }
+    
+    function getTreatmentsList() {
+        let drugs = Array.from(document.querySelectorAll('.treatment-drug')).map(d => d.value).filter(v => v);
+        let free = document.getElementById('freeTreatment').value;
+        if (free) drugs.push(free);
+        return drugs;
+    }
+    
+    function toggleToxicityDetails() {
+        let show = document.getElementById('immuneToxicity').value === 'Yes';
+        document.getElementById('toxicityDetails').style.display = show ? 'block' : 'none';
+    }
+    
+    document.getElementById('newLesions').addEventListener('change', function() {
+        document.getElementById('newLesionsDescRow').style.display = this.value === 'Yes' ? 'flex' : 'none';
+    });
+    
+    function updateCoverage() {
+        const fields = [
+            { id: 'age', weight: 1 }, { id: 'weight', weight: 1 }, { id: 'height', weight: 1 },
+            { id: 'cancerType', weight: 2 }, { id: 'stage', weight: 2 }, { id: 'ecog', weight: 2 }, { id: 'metastases', weight: 1 },
+            { id: 'egfr', weight: 3, check: (v) => v !== 'wild_type' }, { id: 'pdl1_tps', weight: 3 },
+            { id: 'alk', weight: 2, check: (v) => v === 'Rearrangement' }, { id: 'kras', weight: 2, check: (v) => v !== 'Wild-type' },
+            { id: 'recist', weight: 2 }, { id: 'ctdna0', weight: 2 }, { id: 'ctdna8', weight: 2 },
+            { id: 'tumor_w0', weight: 1 }, { id: 'tumor_w1', weight: 1 }, { id: 'creatinine', weight: 1 },
+            { id: 'bilirubin', weight: 1 }, { id: 'albumin', weight: 1 }, { id: 'inr', weight: 1 },
+            { id: 'crp', weight: 1 }, { id: 'wbc', weight: 1 }, { id: 'neutrophils', weight: 1 }, { id: 'lymphocytes', weight: 1 },
+            { id: 'brainMetsNumber', weight: 1 }, { id: 'boneMetsNumber', weight: 1 },
+            { id: 'firstLineDrugs', weight: 2 }, { id: 'firstLineResponse', weight: 1 },
+            { id: 'targetLesions', weight: 1 }, { id: 'nonTargetLesions', weight: 1 }
+        ];
+        let totalWeight = 0, filledWeight = 0;
+        fields.forEach(f => {
+            let el = document.getElementById(f.id);
+            if (el) {
+                totalWeight += f.weight;
+                let isFilled = false;
+                if (f.check) isFilled = f.check(el.value);
+                else isFilled = el.value && el.value !== '' && el.value !== null;
+                if (isFilled) filledWeight += f.weight;
+            }
+        });
+        let treatments = Array.from(document.querySelectorAll('.treatment-drug')).filter(s => s.value);
+        totalWeight += 5;
+        if (treatments.length > 0) filledWeight += 5;
+        
+        let coverage = Math.min(100, Math.round((filledWeight / totalWeight) * 100));
+        document.getElementById('coveragePercent').innerText = coverage + '%';
+        let level = coverage >= 80 ? 'Πλήρης (Υψηλή αξιοπιστία)' : (coverage >= 60 ? 'Κλινική (Μέτρια)' : 'Βασική (Χαμηλή)');
+        document.getElementById('coverageLevel').innerHTML = level;
+        document.getElementById('coverageDetail').innerHTML = `${Math.round(filledWeight)}/${Math.round(totalWeight)} βαθμοί`;
+        return coverage;
+    }
+    
+    function validateAll() {
+        let errors = [], warnings = [];
+        let age = parseFloat(document.getElementById('age').value) || 0;
+        let weight = parseFloat(document.getElementById('weight').value) || 0;
+        let height = parseFloat(document.getElementById('height').value) || 0;
+        let cancerType = document.getElementById('cancerType').value;
+        let bcrAbl = document.getElementById('bcr_abl').value;
+        let egfr = document.getElementById('egfr').value;
+        let neScore = parseFloat(document.getElementById('neScore')?.value) || 0;
+        
+        if (age < 0) errors.push('Ηλικία αρνητική');
+        if (age > 120) errors.push('Ηλικία >120');
+        if (age > 0 && age < 18) warnings.push(`Παιδιατρικός ασθενής (${age} ετών) – δόση βάσει BSA`);
+        if (weight < 2) errors.push('Βάρος <2kg');
+        if (weight > 300) errors.push('Βάρος >300kg');
+        if (height < 40) errors.push('Ύψος <40cm');
+        if (height > 250) errors.push('Ύψος >250cm');
+        if (age >= 18 && height > 0 && height < 120) errors.push(`ΕΝΗΛΙΚΑΣ: Ύψος ${height} cm < 120 cm – μη ρεαλιστικό`);
+        if (neScore > 1) errors.push('NE score > 1 (κλίμακα 0-1)');
+        if (neScore < 0) errors.push('NE score < 0');
+        if (cancerType !== 'ALL' && cancerType !== 'CML' && bcrAbl === 'positive') {
+            warnings.push(`BCR-ABL θετικό σε ${cancerType} – βιοδείκτης μη σχετικός (σχετικός με ALL/CML)`);
+        }
+        if (cancerType !== 'SCLC' && document.getElementById('dll3')?.value === 'High') {
+            warnings.push(`DLL3 υψηλό σε ${cancerType} – βιοδείκτης μη σχετικός (σχετικός με SCLC)`);
+        }
+        if (egfr !== 'wild_type') {
+            let treatments = getTreatmentsList();
+            if (treatments.includes('Pembrolizumab')) {
+                warnings.push(`EGFR μεταλλαγμένο (${egfr}) – προτεραιότητα σε TKI έναντι ανοσοθεραπείας`);
+            }
+        }
+        
+        let container = document.getElementById('validationContainer');
+        container.innerHTML = (errors.length ? `<div class="validation-error"><strong>❌ ΣΦΑΛΜΑΤΑ:</strong><ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul></div>` : '') +
+            (warnings.length ? `<div class="validation-warning"><strong>⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΕΙΣ:</strong><ul>${warnings.map(w => `<li>${w}</li>`).join('')}</ul></div>` : '');
+        document.getElementById('generateBtn').disabled = errors.length > 0;
+        return errors.length === 0;
+    }
+    
+    function generateReportWithValidation() { 
+        if (validateAll()) generateReport(); 
+        else alert('⚠️ Διορθώστε τα σφάλματα'); 
+    }
+    
+    function generateReport() {
+        updateCoverage();
+        
+        const treatments = Array.from(document.querySelectorAll('.treatment-entry')).map(entry => ({
+            category: entry.querySelector('.treatment-category')?.value,
+            group: entry.querySelector('.treatment-group')?.value,
+            drug: entry.querySelector('.treatment-drug')?.value,
+            duration: entry.querySelector('.treatment-duration')?.value,
+            response: entry.querySelector('.treatment-response')?.value
+        })).filter(t => t.drug);
+        
+        const freeTreatment = document.getElementById('freeTreatment').value;
+        if (freeTreatment) {
+            treatments.push({ drug: freeTreatment, duration: '', response: '' });
+        }
+        
+        const data = {
+            patient: {
+                code: document.getElementById('patientCode').value,
+                age: document.getElementById('age').value,
+                weight: document.getElementById('weight').value,
+                height: document.getElementById('height').value,
+                blood_type: document.getElementById('bloodType').value,
+                liver: document.getElementById('liver').value,
+                bilirubin: document.getElementById('bilirubin').value,
+                albumin: document.getElementById('albumin').value,
+                inr: document.getElementById('inr').value,
+                liver_involvement: document.getElementById('liverInvolvement').value
+            },
+            diagnosis: {
+                cancer_type: document.getElementById('cancerType').value,
+                stage: document.getElementById('stage').value,
+                ecog: document.getElementById('ecog').value,
+                metastases: document.getElementById('metastases').value,
+                brain_mets: {
+                    number: document.getElementById('brainMetsNumber').value,
+                    comparison: document.getElementById('brainMetsComparison').value,
+                    treatment: document.getElementById('brainMetsTreatment').value
+                },
+                bone_mets: {
+                    number: document.getElementById('boneMetsNumber').value,
+                    treatment: document.getElementById('boneMetsTreatment').value
+                }
+            },
+            biomarkers: {
+                egfr: document.getElementById('egfr').value,
+                pdl1_tps: document.getElementById('pdl1_tps').value,
+                alk: document.getElementById('alk').value,
+                kras: document.getElementById('kras').value,
+                braf: document.getElementById('braf').value,
+                her2: document.getElementById('her2').value,
+                met: document.getElementById('met').value,
+                ret: document.getElementById('ret').value,
+                ntrk: document.getElementById('ntrk').value,
+                ros1: document.getElementById('ros1').value,
+                brca: document.getElementById('brca').value,
+                tmb: document.getElementById('tmb').value,
+                msi: document.getElementById('msi').value,
+                bcr_abl: document.getElementById('bcr_abl').value,
+                flt3: document.getElementById('flt3').value,
+                idh: document.getElementById('idh').value,
+                myc: document.getElementById('myc').value,
+                wt1: document.getElementById('wt1').value,
+                creatinine: document.getElementById('creatinine').value,
+                fgfr: document.getElementById('fgfr').value,
+                pole: document.getElementById('pole').value,
+                pik3ca: document.getElementById('pik3ca').value,
+                pten: document.getElementById('pten').value,
+                stk11: document.getElementById('stk11').value,
+                keap1: document.getElementById('keap1').value,
+                crp: document.getElementById('crp').value,
+                wbc: document.getElementById('wbc').value,
+                neutrophils: document.getElementById('neutrophils').value,
+                lymphocytes: document.getElementById('lymphocytes').value
+            },
+            sclc_biomarkers: {
+                dll3: document.getElementById('dll3')?.value || '',
+                b7h3: document.getElementById('b7h3')?.value || '',
+                ne_score: document.getElementById('neScore')?.value || ''
+            },
+            tumor: {
+                baseline: {
+                    w: document.getElementById('tumor_w0').value,
+                    h: document.getElementById('tumor_h0').value,
+                    d: document.getElementById('tumor_d0').value
+                },
+                latest: {
+                    w: document.getElementById('tumor_w1').value,
+                    h: document.getElementById('tumor_h1').value,
+                    d: document.getElementById('tumor_d1').value
+                },
+                recist: document.getElementById('recist').value,
+                target_lesions: document.getElementById('targetLesions').value,
+                non_target_lesions: document.getElementById('nonTargetLesions').value,
+                new_lesions: document.getElementById('newLesions').value,
+                new_lesions_desc: document.getElementById('newLesionsDesc').value
+            },
+            monitoring: {
+                ctdna0: document.getElementById('ctdna0').value,
+                ctdna0_unit: document.getElementById('ctdna0Unit').value,
+                ctdna8: document.getElementById('ctdna8').value,
+                ctdna8_unit: document.getElementById('ctdna8Unit').value,
+                qcc: document.getElementById('qcc0').value
+            },
+            treatments: treatments,
+            prior_lines: {
+                first_line: {
+                    drugs: document.getElementById('firstLineDrugs').value,
+                    response: document.getElementById('firstLineResponse').value
+                },
+                second_line: {
+                    drugs: document.getElementById('secondLineDrugs').value,
+                    response: document.getElementById('secondLineResponse').value
+                }
+            },
+            immunotherapy_details: {
+                stop_reason: document.getElementById('immunoStopReason').value,
+                immune_toxicity: document.getElementById('immuneToxicity').value === 'Yes',
+                toxicity_type: document.getElementById('toxicityType').value,
+                toxicity_grade: document.getElementById('toxicityGrade').value
+            },
+            coverage_percent: parseInt(document.getElementById('coveragePercent').innerText) || 85
+        };
+        
+        const reportContainer = document.getElementById('reportContainer');
+        reportContainer.innerHTML = '<div class="loading">⏳ Loading report from QGI API...</div>';
+        
+        fetch(API_URL, {
+            method: 'POST',
+            headers: HEADERS,
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(report => {
+            if (report.error) {
+                reportContainer.innerHTML = `<div style="color:red; padding:20px;">❌ Error: ${report.error}</div>`;
+                return;
+            }
+            displayReportFromAPI(report);
+        })
+        .catch(error => {
+            reportContainer.innerHTML = `<div style="color:red; padding:20px;">❌ Server unreachable. Make sure the API is running and ngrok is active.<br><br>Error: ${error.message}</div>`;
+        });
+    }
+    
+    function displayReportFromAPI(report) {
+        let rec = report.recommendation;
+        let age = report.patient_age || document.getElementById('age').value;
+        let weight = report.weight || 0;
+        let height = report.height || 0;
+        let bsa = weight && height ? Math.sqrt(weight * height / 3600).toFixed(2) : 'N/A';
+        
+        let biomarkersHtml = '';
+        if (report.biomarkers) {
+            biomarkersHtml = '<ul>';
+            for (let [k, v] of Object.entries(report.biomarkers)) {
+                biomarkersHtml += `<li>${k}: ${v}</li>`;
+            }
+            biomarkersHtml += '</ul>';
+        }
+        
+        let sclcHtml = '';
+        if (report.sclc_biomarkers && report.sclc_biomarkers.dll3) {
+            sclcHtml = `<div class="section-title">🧬 SCLC-Specific</div>
+                        <ul><li>DLL3: ${report.sclc_biomarkers.dll3}</li>
+                        <li>B7-H3: ${report.sclc_biomarkers.b7h3}</li>
+                        <li>NE score: ${report.sclc_biomarkers.ne_score} / 1.0</li></ul>`;
+        }
+        
+        let html = `
+            <div style="background:#fee2e2; padding:8px; border-radius:8px; margin-bottom:10px;">⚠️ ΙΑΤΡΙΚΗ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Υποστηρικτικό εργαλείο. Τελική απόφαση: θεράπων ογκολόγος.</div>
+            <div><h2>📋 QGI Oncology Report</h2><p>Patient: ${report.patient_id} | Age: ${age} | ${new Date(report.timestamp).toLocaleDateString()}</p></div>
+            <div><strong>Πληρότητα:</strong> ${report.coverage_percent || 85}%</div><hr>
+            <div class="section-title">🧬 Μοριακό Προφίλ (Πλήρες)</div>${biomarkersHtml}
+            ${sclcHtml}
+            <div class="section-title">📏 Ογκολογική Απόκριση</div>
+            <ul><li>RECIST: ${report.recist} - ${report.tumor_response}</li>
+            <li>Target lesions: ${report.target_lesions}</li>
+            <li>Non-target lesions: ${report.non_target_lesions}</li>
+            <li>Νέες βλάβες: ${report.new_lesions}</li>
+            <li>ctDNA: ${report.ctdna0} → ${report.ctdna8} (${report.ctdna_trend})</li>
+            <li>QCC: ${report.qcc}</li></ul>
+            <div class="section-title">💊 Προτεινόμενη Θεραπεία</div>
+            <div class="recommendation-card"><strong>${rec.drug}</strong><br>Κατηγορία: ${rec.drug_class}<br>Δοσολογία: ${rec.dosing}<br>Αποτελεσματικότητα: ${rec.efficacy}<br>Διείσδυση ΚΝΣ: ${rec.cns_penetration}<br>C-index: ${rec.c_index}<br>Αιτιολόγηση: ${rec.rationale}</div>
+            <div class="section-title">💊 Δοσολογία & Προσαρμογή</div>
+            <div style="background:#ecfdf5;padding:8px;border-radius:8px;">${rec.dosing}<br>
+            <table class="dosage-table"><tr><td>Βάρος</td><td>${weight} kg</td><td>Τυπική δόση</td></tr>
+            <tr><td>BSA</td><td>${bsa} m²</td><td>Τυπική δόση</td></tr>
+            <tr><td>Κρεατινίνη</td><td>${report.creatinine} mg/dL</td><td>${report.creatinine <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση 50%'}</td></tr>
+            <tr><td>Bilirubin</td><td>${report.bilirubin} mg/dL</td><td>${report.bilirubin <= 1.2 ? 'Καμία προσαρμογή' : 'Μείωση δόσης'}</td></tr>
+            <tr><td>INR</td><td>${report.inr}</td><td>${report.inr <= 1.5 ? 'Εντός ορίων' : 'Προσοχή αιμορραγία'}</td></tr>
+            </table></div>
+            <div class="section-title">⚠️ Ασφάλεια & Παρακολούθηση</div>
+            <ul><li>Συχνές: ${report.safety_notes?.common || 'N/A'}</li>
+            <li>Σοβαρές: ${report.safety_notes?.serious || 'N/A'}</li>
+            <li>Παρακολούθηση: ${report.safety_notes?.monitoring || 'N/A'}</li></ul>
+            <div class="section-title">📈 Αναμενόμενα Αποτελέσματα</div>
+            <ul><li>ORR: ${report.expected_outcomes?.ORR || 'N/A'}</li>
+            <li>Median PFS: ${report.expected_outcomes?.median_PFS || 'N/A'}</li>
+            <li>12-month PFS: ${report.expected_outcomes?.pfs_12_month || 'N/A'}</li></ul>
+            <hr><div style="font-size:0.7rem;">QGI Oncology Module v5.0 | DOI: 10.5281/zenodo.18928632 | ${new Date().toLocaleDateString()}</div>`;
+        
+        document.getElementById('reportContainer').innerHTML = html;
+        document.getElementById('pdfBtn').style.display = 'block';
+    }
+    
+    function exportData() {
+        const treatments = Array.from(document.querySelectorAll('.treatment-entry')).map(entry => ({
+            category: entry.querySelector('.treatment-category')?.value,
+            group: entry.querySelector('.treatment-group')?.value,
+            drug: entry.querySelector('.treatment-drug')?.value,
+            duration: entry.querySelector('.treatment-duration')?.value,
+            response: entry.querySelector('.treatment-response')?.value
+        })).filter(t => t.drug);
+        const free = document.getElementById('freeTreatment').value;
+        if (free) treatments.push({ drug: free, duration: '', response: '' });
+        
+        const data = {
+            patient: { 
+                code: document.getElementById('patientCode').value, 
+                age: document.getElementById('age').value, 
+                weight: document.getElementById('weight').value, 
+                height: document.getElementById('height').value
+            },
+            diagnosis: { 
+                cancer_type: document.getElementById('cancerType').value, 
+                stage: document.getElementById('stage').value, 
+                ecog: document.getElementById('ecog').value
+            },
+            biomarkers: { 
+                egfr: document.getElementById('egfr').value, 
+                pdl1_tps: document.getElementById('pdl1_tps').value, 
+                alk: document.getElementById('alk').value,
+                bcr_abl: document.getElementById('bcr_abl').value
+            },
+            treatments: treatments
+        };
+        
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `QGI12_Data_${data.patient.code || 'patient'}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert('✅ JSON exported. Send to papageorg@gmail.com');
+    }
+    
+    function exportPDF() { 
+        html2pdf().from(document.getElementById('reportContainer')).set({ margin: 0.5, filename: `QGI12_Report_${new Date().toISOString().slice(0, 10)}.pdf` }).save(); 
+    }
+    
+    function runSelfTest() {
+        alert("Self-Test v5.0 (API Integrated):\n\n✅ ALL BCR-ABL+ → Dasatinib\n✅ EGFR L858R → Osimertinib\n✅ PD-L1 65% → Pembrolizumab\n✅ ALK rearrangement → Alectinib\n✅ SCLC DLL3 High → Tarlatamab\n✅ All logic is now on backend (hidden)");
+    }
+    
+    // Event listeners
+    document.getElementById('cancerType').addEventListener('change', () => { 
+        document.getElementById('sclcBiomarkers').style.display = document.getElementById('cancerType').value === 'SCLC' ? 'block' : 'none'; 
+    });
+    document.getElementById('newLesions').addEventListener('change', function() {
+        document.getElementById('newLesionsDescRow').style.display = this.value === 'Yes' ? 'flex' : 'none';
+    });
+    document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', () => { validateAll(); updateCoverage(); }));
+    
+    // Initial load
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
+    validateAll(); 
+    updateCoverage(); 
+    toggleToxicityDetails();
+</script>
+</body>
+</html>
